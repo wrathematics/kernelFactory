@@ -1,6 +1,7 @@
 Package: kernelFactory
 Title: Kernel Factory: An Ensemble of Kernel Machines
 Version: 0.3.0
+Depends: R (>= 3.1.0)
 Imports: randomForest, 
     AUC, 
     genalg, 
