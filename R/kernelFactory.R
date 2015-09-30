@@ -72,53 +72,27 @@ function(x=NULL,
     stop("NAs not permitted.")
   }
   
-  t <- table(y)
+  tab <- table(y)
   if (any(t == 0)) stop("Cannot have empty classes in y.")
   
   if (length(names(t)) != 2) stop("Must have 2 classes. Support for more classes will be added later.")
   
 
   #OVERSAMPLING
-  tab <- table(y)
   if (!all(tab==tab[1])){
-      if (oversample) {
-
-        #oversample instances from the smallest class
-        whichmin <- which(y==as.integer(names(which.min(tab))))
-        indmin <- sample(whichmin,max(tab),replace=TRUE)
-        indmin <- c(whichmin,indmin)[1:max(tab)]
-        #take all the instances of the dominant class
-        indmax <- which(y==as.integer(names(which.max(tab))))
-        x <- x[c(indmin,indmax),]
-        y <- y[c(indmin,indmax)]    
-      }
+    if (oversample) {
+      #oversample instances from the smallest class
+      whichmin <- which(y==as.integer(names(which.min(tab))))
+      indmin <- sample(whichmin,max(tab),replace=TRUE)
+      indmin <- c(whichmin,indmin)[1:max(tab)]
+      #take all the instances of the dominant class
+      indmax <- which(y==as.integer(names(which.max(tab))))
+      x <- x[c(indmin,indmax),]
+      y <- y[c(indmin,indmax)]    
+    }
   }
   
   #STEP0 SEPERATE DATA INTO TRAINING AND VALIDATION
-
-  .partition <- function(y,p=0.5,times=1) {
-  
-  #STEP 1: split up 0 and 1
-  class1_ind <- which(y==as.integer(levels(y)[1]))
-  class2_ind <- which(y==as.integer(levels(y)[2]))
-  
-  l <- list()
-  for (i in 1:times){
-  
-  #STEP 2: take subsamples for both 0 and 1
-  class1_ind_train <- sample(class1_ind, floor(p*table(y)[1]),replace=FALSE)
-  class2_ind_train <- sample(class2_ind, floor(p*table(y)[2]),replace=FALSE)
-
-  class1_ind_test <- class1_ind[!class1_ind %in% class1_ind_train]
-  class2_ind_test <- class2_ind[!class2_ind %in% class2_ind_train]
-
-  #STEP 3: combine 0 and 1 for both train and test
-  
-  l[[i]] <- list(train=c(class1_ind_train,class2_ind_train),test=c(class1_ind_test,class2_ind_test))
-  }
-  l
-  }
-  
   train.ind <- .partition(y,0.75)[[1]]$train
   
   xtrain <- x[train.ind,]
@@ -127,8 +101,14 @@ function(x=NULL,
   xtest <-  x[-train.ind,]
   ytest <-  y[-train.ind]
   
-  constants <- sapply(xtrain,function(x){all(as.numeric(x[1])==as.numeric(x))})
-  if (!is.null(filter)) constants <- sapply(xtrain,function(x) (length(unique(x))==2 && any(table(x) <= round(nrow(xtrain)*filter))) || all(as.numeric(x[1])==as.numeric(x))   )
+  if (!is.null(filter))
+  {
+    upper.bound <- round(nrow(xtrain)*filter)
+    constants <- sapply(xtrain, get_constants, upper.bound=upper.bound)
+  }
+  else
+    constants <- sapply(xtrain, get_constants)
+  
   xtrain <- xtrain[,!constants]
   xtest <- xtest[,!constants]
 
@@ -508,3 +488,46 @@ class(result) <- "kernelFactory"
 
 return(result)
 }
+
+
+
+### Utilities
+.partition <- function(y,p=0.5,times=1) {
+  #STEP 1: split up 0 and 1
+  class1_ind <- which(y==as.integer(levels(y)[1]))
+  class2_ind <- which(y==as.integer(levels(y)[2]))
+  
+  l <- list()
+  for (i in 1:times){
+    #STEP 2: take subsamples for both 0 and 1
+    class1_ind_train <- sample(class1_ind, floor(p*table(y)[1]),replace=FALSE)
+    class2_ind_train <- sample(class2_ind, floor(p*table(y)[2]),replace=FALSE)
+    
+    class1_ind_test <- class1_ind[!class1_ind %in% class1_ind_train]
+    class2_ind_test <- class2_ind[!class2_ind %in% class2_ind_train]
+    
+    #STEP 3: combine 0 and 1 for both train and test
+    l[[i]] <- list(train=c(class1_ind_train,class2_ind_train),test=c(class1_ind_test,class2_ind_test))
+  }
+  l
+}
+
+
+# x = column of input data
+# ub = upper bound = round(nrow(xtrain)*filter)
+get_constants <- function(x, upper.bound){
+  all.first <- all(as.numeric(x[1]) == as.numeric(x))
+  if (missing(upper.bound))
+    return(all.first)
+  
+  tab <- table(x)
+  
+  len2 <- length(tab)==2
+  satisfies.ub <- any(tab <= upper.bound)
+  
+  (len2 && satisfies.ub) || all.same
+}
+
+
+
+
