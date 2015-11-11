@@ -73,9 +73,9 @@ function(x=NULL,
   }
   
   tab <- table(y)
-  if (any(t == 0)) stop("Cannot have empty classes in y.")
+  if (any(tab == 0)) stop("Cannot have empty classes in y.")
   
-  if (length(names(t)) != 2) stop("Must have 2 classes. Support for more classes will be added later.")
+  if (length(names(tab)) != 2) stop("Must have 2 classes. Support for more classes will be added later.")
   
 
   #OVERSAMPLING
