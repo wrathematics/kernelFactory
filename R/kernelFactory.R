@@ -525,7 +525,7 @@ get_constants <- function(x, upper.bound){
   len2 <- length(tab)==2
   satisfies.ub <- any(tab <= upper.bound)
   
-  (len2 && satisfies.ub) || all.same
+  (len2 && satisfies.ub) || all.first
 }
 
 
