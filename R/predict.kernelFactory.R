@@ -68,109 +68,94 @@ function(object,
   
   
   rm(numericcolumns)
-
-
-## ORDER VARIABLES ACCORDING TO TRAINING SET
-newdata <- newdata[,colnames(object$trn[,names(object$trn)!= "Y"])]
-
-
-#STEP3 ### CREATE PARTITIONS 
-
-
-testlist <- list()
-colparts <- object$cpr
-rowparts <- object$rpr
-
-startcol <- 1
-counter <- 0
-#HANDLE UNEVEN NUMBER OF VARIABLES
-
-if (ncol(newdata)%%colparts > 0) {
-numbercols <- ncol(newdata)-(ncol(newdata)%%colparts )
-} else {
-numbercols <-  ncol(newdata)  }
-
-
-
-for (i in 1:colparts ){
-
   
-endcol <-(i/colparts )*numbercols 
-if (i==colparts ) endcol <- ncol(newdata)
-
-startrow <- 1
-for (j in 1:rowparts) {
-counter = counter + 1
-
-testlist[[counter]] <- newdata[,c(startcol:endcol)]
-
-
-
-}
-
-startcol <- endcol + 1
-}
-
-#STEP4 ### SCORING
-
-
-#STEP 5.1 PREPARING 
-predicted <- list()
-resultsKIRFScored <- list()
-for (i in 1:object$cntr) {                
-
-
-if (is.null(testlist[[i]][,sapply(testlist[[i]],is.numeric)]) == FALSE) {
-
-
-#Extract split variables for all trees: these are observation numbers from the trainingdata: split observations
-trainobs <- object$trnlst[[i]][,sapply(object$trnlst[[i]],is.numeric)]
-
-
-
-           
-#compute dot product per split observation from training data with all validation observations: This results in 1 column per split observation
-resultsKIRFScored[[i]] <- data.frame(data.frame(kernelMatrix(object$rbfstre[[i]], as.matrix(testlist[[i]][,sapply(testlist[[i]],is.numeric)]),as.matrix(trainobs))),
-data.frame(testlist[[i]]))
-                 
-          
-colnames(resultsKIRFScored[[i]]) <- colnames(object$rbfmtrX[[i]])
-
-#STEP 5.2 ACTUAL PREDICTION
-    if (predict.all && object$cpr==1 && object$rpr==1 ) { # predict.all
-    predicted[[i]]  <- data.frame(sapply(data.frame(predict(object$rsltsKF[[i]], 
-                                                        resultsKIRFScored[[i]],type="prob", 
-                                                        predict.all=TRUE)$individual,
-                                                stringsAsFactors=FALSE),
-                                     as.integer,
-                                     simplify=FALSE)
-                              )
-  } else { #combined prediction
-    predicted[[i]] <- predict(object$rsltsKF[[i]],resultsKIRFScored[[i]],type="prob")[,2]
+  
+  ## ORDER VARIABLES ACCORDING TO TRAINING SET
+  newdata <- newdata[,colnames(object$trn[,names(object$trn)!= "Y"])]
+  
+  
+  #STEP3 ### CREATE PARTITIONS 
+  
+  
+  testlist <- list()
+  colparts <- object$cpr
+  rowparts <- object$rpr
+  
+  startcol <- 1
+  counter <- 0
+  #HANDLE UNEVEN NUMBER OF VARIABLES
+  
+  if (ncol(newdata)%%colparts > 0) {
+    numbercols <- ncol(newdata)-(ncol(newdata)%%colparts )
+  } else {
+    numbercols <-  ncol(newdata)
   }
-
-
-} else {
   
-  if (predict.all && object$cpr==1 && object$rpr==1 ) { #predict.all
-    predicted[[i]]  <- data.frame(sapply(data.frame(predict(object$rsltsKF[[i]], 
-                                                        testlist[[i]],type="prob", 
-                                                        predict.all=TRUE)$individual,
-                                                stringsAsFactors=FALSE),
-                                     as.integer,
-                                     simplify=FALSE)
-                              )
-  } else { #combined prediction
-    predicted[[i]] <- predict(object$rsltsKF[[i]],testlist[[i]],type="prob")[,2]
+  
+  
+  for (i in 1:colparts ){
+    endcol <-(i/colparts )*numbercols 
+    if (i==colparts ) endcol <- ncol(newdata)
+    
+    startrow <- 1
+    for (j in 1:rowparts) {
+      counter = counter + 1
+      testlist[[counter]] <- newdata[,c(startcol:endcol)]
+    }
+    
+    startcol <- endcol + 1
   }
-
-}
-}
-
-if (predict.all && object$cpr==1 && object$rpr==1  ) {
-  return(predicted[[1]])
-} else {
   
+  #STEP4 ### SCORING
+  
+  
+  #STEP 5.1 PREPARING 
+  predicted <- list()
+  resultsKIRFScored <- list()
+  for (i in 1:object$cntr) {
+    if (is.null(testlist[[i]][,sapply(testlist[[i]],is.numeric)]) == FALSE) {
+      #Extract split variables for all trees: these are observation numbers from the trainingdata: split observations
+      trainobs <- object$trnlst[[i]][,sapply(object$trnlst[[i]],is.numeric)]
+      
+      #compute dot product per split observation from training data with all validation observations: This results in 1 column per split observation
+      resultsKIRFScored[[i]] <- data.frame(data.frame(kernelMatrix(object$rbfstre[[i]], as.matrix(testlist[[i]][,sapply(testlist[[i]],is.numeric)]),as.matrix(trainobs))),
+      data.frame(testlist[[i]]))
+      
+      colnames(resultsKIRFScored[[i]]) <- colnames(object$rbfmtrX[[i]])
+      
+      #STEP 5.2 ACTUAL PREDICTION
+      if (predict.all && object$cpr==1 && object$rpr==1 ) { # predict.all
+      predicted[[i]]  <- data.frame(sapply(data.frame(predict(object$rsltsKF[[i]], 
+                                                          resultsKIRFScored[[i]],type="prob", 
+                                                          predict.all=TRUE)$individual,
+                                                  stringsAsFactors=FALSE),
+                                       as.integer,
+                                       simplify=FALSE)
+                                )
+      } else { #combined prediction
+        predicted[[i]] <- predict(object$rsltsKF[[i]],resultsKIRFScored[[i]],type="prob")[,2]
+      }
+    
+    } else {
+      if (predict.all && object$cpr==1 && object$rpr==1 ) { #predict.all
+        predicted[[i]]  <- data.frame(sapply(data.frame(predict(object$rsltsKF[[i]], 
+                                                            testlist[[i]],type="prob", 
+                                                            predict.all=TRUE)$individual,
+                                                    stringsAsFactors=FALSE),
+                                         as.integer,
+                                         simplify=FALSE)
+                                  )
+      } else { #combined prediction
+        predicted[[i]] <- predict(object$rsltsKF[[i]],testlist[[i]],type="prob")[,2]
+      }
+    
+    }
+  }
+  
+  
+  if (predict.all && object$cpr==1 && object$rpr==1  ) {
+    return(predicted[[1]])
+  } else {
     #STEP 5.3 COLLECTING PREDICTIONS
     final <- data.frame(matrix(nrow=nrow(newdata),ncol=(object$cntr)))
     for (i in 1:object$cntr) {
@@ -186,6 +171,5 @@ if (predict.all && object$cpr==1 && object$rpr==1  ) {
     } else {
       return(rowSums(res))
     }
-}
-  
+  }
 }
