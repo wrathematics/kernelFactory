@@ -159,13 +159,12 @@ function(object,
     #STEP 5.3 COLLECTING PREDICTIONS
     final <- data.frame(matrix(nrow=nrow(newdata),ncol=(object$cntr)))
     for (i in 1:object$cntr) {
-    final[,i] <- predicted[[i]]
+      final[,i] <- predicted[[i]]
     }
-
     
     #STEP 5.4 APPLYING WEIGHTS  
     res <- t(as.numeric(object$wghts) * t(final))
-
+    
     if (predict.all) {
       return(data.frame(final))
     } else {
